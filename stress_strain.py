@@ -47,16 +47,41 @@ st.markdown("""
 
 MATERIALS = {
     "--- User Defined ---": {"E": 0.0, "alpha": 0.0, "yield": 0.0},
+    
+    # METALS - FERROUS
     "Steel, Structural (ASTM A36)":    {"E": 200e9,  "alpha": 11.7e-6, "yield": 250e6},
     "Steel, Stainless (304)":          {"E": 193e9,  "alpha": 17.2e-6, "yield": 205e6},
+    "Steel, High Strength (ASTM A514)":{"E": 205e9,  "alpha": 11.7e-6, "yield": 690e6},
+    "Cast Iron, Gray (ASTM 20)":       {"E": 100e9,  "alpha": 11.0e-6, "yield": 150e6}, # Ult Strength
+    "Cast Iron, Ductile (60-40-18)":   {"E": 169e9,  "alpha": 11.0e-6, "yield": 276e6},
+
+    # METALS - NON-FERROUS
     "Aluminum 6061-T6":               {"E": 68.9e9, "alpha": 23.6e-6, "yield": 276e6},
+    "Aluminum 2024-T4":               {"E": 73.1e9, "alpha": 23.2e-6, "yield": 324e6},
+    "Aluminum 7075-T6":               {"E": 71.7e9, "alpha": 23.6e-6, "yield": 503e6},
     "Titanium Alloy (Ti-6Al-4V)":     {"E": 113.8e9,"alpha": 8.6e-6,  "yield": 880e6},
     "Copper, Pure (Annealed)":        {"E": 110e9,  "alpha": 16.5e-6, "yield": 69e6},
     "Brass, Yellow (C26800)":         {"E": 105e9,  "alpha": 20.3e-6, "yield": 250e6},
+    "Bronze, Phosphor (C51000)":      {"E": 110e9,  "alpha": 17.8e-6, "yield": 300e6},
+    "Magnesium Alloy (AZ31B)":        {"E": 45e9,   "alpha": 26.0e-6, "yield": 220e6},
+
+    # PLASTICS / POLYMERS
+    "Plastic - ABS":                  {"E": 2.3e9,  "alpha": 74e-6,   "yield": 40e6},
     "Plastic - Nylon 6/6":            {"E": 2.8e9,  "alpha": 80e-6,   "yield": 80e6},
     "Plastic - Polycarbonate":        {"E": 2.4e9,  "alpha": 67e-6,   "yield": 65e6},
-    "Concrete, High Strength":        {"E": 30e9,   "alpha": 10e-6,   "yield": 40e6}, 
-    "Wood - Oak (White)":             {"E": 12e9,   "alpha": 5e-6,    "yield": 50e6}, 
+    "Plastic - HDPE":                 {"E": 0.8e9,  "alpha": 120e-6,  "yield": 25e6},
+    "Plastic - PVC (Rigid)":          {"E": 3.0e9,  "alpha": 50e-6,   "yield": 50e6},
+    "Plastic - Acrylic (PMMA)":       {"E": 3.0e9,  "alpha": 70e-6,   "yield": 65e6},
+
+    # COMPOSITES (Approximate Longitudinal Values)
+    "Composite - Carbon Fiber (UD)":  {"E": 135e9,  "alpha": 0.5e-6,  "yield": 1500e6},
+    "Composite - Glass Fiber (UD)":   {"E": 40e9,   "alpha": 7.0e-6,  "yield": 1000e6},
+
+    # CERAMICS & OTHERS
+    "Glass, Soda-Lime":               {"E": 70e9,   "alpha": 9.0e-6,  "yield": 50e6}, # Fracture Strength
+    "Concrete, High Strength":        {"E": 30e9,   "alpha": 10e-6,   "yield": 40e6}, # Compressive
+    "Wood - Oak (White)":             {"E": 12e9,   "alpha": 5e-6,    "yield": 50e6}, # Parallel to grain
+    "Wood - Pine (Southern)":         {"E": 11e9,   "alpha": 5e-6,    "yield": 40e6}, # Parallel to grain
 }
 
 UNIT_LENGTH = {"m": 1.0, "mm": 1e-3, "cm": 1e-2, "in": 0.0254, "ft": 0.3048}
@@ -396,3 +421,4 @@ elif app_mode == "Parametric Plotter":
                     ax.set_ylim(0, top_lim)
 
             st.pyplot(fig)
+

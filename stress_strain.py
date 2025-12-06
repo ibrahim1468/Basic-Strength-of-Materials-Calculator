@@ -11,7 +11,6 @@ st.set_page_config(
 )
 
 # Custom CSS for a professional, "Engineering Software" look
-# Added specific color forcing to fix "white on white" issues in Dark Mode
 st.markdown("""
     <style>
     .block-container {padding-top: 2rem;}
@@ -19,12 +18,8 @@ st.markdown("""
     h2, h3 {font-family: 'Roboto', sans-serif; color: #1e3d59;}
     
     /* Force text color in metrics to be dark since background is light */
-    [data-testid="stMetricValue"] {
-        color: #1e3d59 !important;
-    }
-    [data-testid="stMetricLabel"] {
-        color: #1e3d59 !important;
-    }
+    [data-testid="stMetricValue"] { color: #1e3d59 !important; }
+    [data-testid="stMetricLabel"] { color: #1e3d59 !important; }
     
     .stMetric {
         background-color: #f0f2f6; 
@@ -37,22 +32,53 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# =================================== LOGIC & CONVERSION ENGINE ===================================
+# =================================== ENGINEERING DATA ENGINE ===================================
 
-# Material Database
+# COMPREHENSIVE MATERIAL DATABASE (SI UNITS: Pa, 1/K, Pa)
+# Sources: MatWeb, ASTM Standards, Engineering Toolbox
 MATERIALS = {
-    "Custom": {"E": 200e9, "alpha": 12e-6, "yield": 250e6},
-    "Structural Steel (A36)": {"E": 200e9, "alpha": 11.7e-6, "yield": 250e6},
-    "Aluminum 6061-T6": {"E": 68.9e9, "alpha": 23.6e-6, "yield": 276e6},
-    "Titanium (Ti-6Al-4V)": {"E": 113.8e9, "alpha": 8.6e-6, "yield": 880e6},
-    "Copper": {"E": 110e9, "alpha": 17e-6, "yield": 70e6},
-    "Brass": {"E": 105e9, "alpha": 19e-6, "yield": 200e6},
+    "--- User Defined ---": {"E": 0.0, "alpha": 0.0, "yield": 0.0},
+    
+    # METALS - FERROUS
+    "Steel, Structural (ASTM A36)":    {"E": 200e9,  "alpha": 11.7e-6, "yield": 250e6},
+    "Steel, Stainless (304)":          {"E": 193e9,  "alpha": 17.2e-6, "yield": 205e6},
+    "Steel, High Strength (ASTM A514)":{"E": 205e9,  "alpha": 11.7e-6, "yield": 690e6},
+    "Cast Iron, Gray (ASTM 20)":       {"E": 100e9,  "alpha": 11.0e-6, "yield": 150e6}, # Ult Strength
+    "Cast Iron, Ductile (60-40-18)":   {"E": 169e9,  "alpha": 11.0e-6, "yield": 276e6},
+
+    # METALS - NON-FERROUS
+    "Aluminum 6061-T6":               {"E": 68.9e9, "alpha": 23.6e-6, "yield": 276e6},
+    "Aluminum 2024-T4":               {"E": 73.1e9, "alpha": 23.2e-6, "yield": 324e6},
+    "Aluminum 7075-T6":               {"E": 71.7e9, "alpha": 23.6e-6, "yield": 503e6},
+    "Titanium Alloy (Ti-6Al-4V)":     {"E": 113.8e9,"alpha": 8.6e-6,  "yield": 880e6},
+    "Copper, Pure (Annealed)":        {"E": 110e9,  "alpha": 16.5e-6, "yield": 69e6},
+    "Brass, Yellow (C26800)":         {"E": 105e9,  "alpha": 20.3e-6, "yield": 250e6},
+    "Bronze, Phosphor (C51000)":      {"E": 110e9,  "alpha": 17.8e-6, "yield": 300e6},
+    "Magnesium Alloy (AZ31B)":        {"E": 45e9,   "alpha": 26.0e-6, "yield": 220e6},
+
+    # PLASTICS / POLYMERS
+    "Plastic - ABS":                  {"E": 2.3e9,  "alpha": 74e-6,   "yield": 40e6},
+    "Plastic - Nylon 6/6":            {"E": 2.8e9,  "alpha": 80e-6,   "yield": 80e6},
+    "Plastic - Polycarbonate":        {"E": 2.4e9,  "alpha": 67e-6,   "yield": 65e6},
+    "Plastic - HDPE":                 {"E": 0.8e9,  "alpha": 120e-6,  "yield": 25e6},
+    "Plastic - PVC (Rigid)":          {"E": 3.0e9,  "alpha": 50e-6,   "yield": 50e6},
+    "Plastic - Acrylic (PMMA)":       {"E": 3.0e9,  "alpha": 70e-6,   "yield": 65e6},
+
+    # COMPOSITES (Approximate Longitudinal Values)
+    "Composite - Carbon Fiber (UD)":  {"E": 135e9,  "alpha": 0.5e-6,  "yield": 1500e6},
+    "Composite - Glass Fiber (UD)":   {"E": 40e9,   "alpha": 7.0e-6,  "yield": 1000e6},
+
+    # CERAMICS & OTHERS
+    "Glass, Soda-Lime":               {"E": 70e9,   "alpha": 9.0e-6,  "yield": 50e6}, # Fracture Strength
+    "Concrete, High Strength":        {"E": 30e9,   "alpha": 10e-6,   "yield": 40e6}, # Compressive
+    "Wood - Oak (White)":             {"E": 12e9,   "alpha": 5e-6,    "yield": 50e6}, # Parallel to grain
+    "Wood - Pine (Southern)":         {"E": 11e9,   "alpha": 5e-6,    "yield": 40e6}, # Parallel to grain
 }
 
 # Unit Multipliers (Converts TO SI Units)
 UNIT_LENGTH = {"m": 1.0, "mm": 1e-3, "cm": 1e-2, "in": 0.0254, "ft": 0.3048}
-UNIT_FORCE = {"N": 1.0, "kN": 1e3, "MN": 1e6, "lbf": 4.44822}
-UNIT_PRESSURE = {"Pa": 1.0, "kPa": 1e3, "MPa": 1e6, "GPa": 1e9, "psi": 6894.76}
+UNIT_FORCE = {"N": 1.0, "kN": 1e3, "MN": 1e6, "lbf": 4.44822, "kip": 4448.22}
+UNIT_PRESSURE = {"Pa": 1.0, "kPa": 1e3, "MPa": 1e6, "GPa": 1e9, "psi": 6894.76, "ksi": 6894760.0}
 UNIT_TEMP = {"K": 1.0, "C": 1.0, "F": 0.5556} # Delta T conversion
 
 def to_si(value, unit, conversion_dict):
@@ -81,9 +107,21 @@ st.sidebar.header("SYSTEM CONTROLS")
 app_mode = st.sidebar.radio("Select Operation Mode", ["Calculator Dashboard", "Parametric Plotter"])
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("**Material Presets**")
-selected_material = st.sidebar.selectbox("Load Material Properties", list(MATERIALS.keys()))
-mat_props = MATERIALS[selected_material]
+st.sidebar.markdown("**Material Library**")
+selected_material_name = st.sidebar.selectbox("Select Material", list(MATERIALS.keys()), index=1)
+mat_props = MATERIALS[selected_material_name]
+
+# Helper to check if custom mode
+is_custom = selected_material_name == "--- User Defined ---"
+
+if is_custom:
+    st.sidebar.info("📝 You are in Custom Mode. Please enter material properties manually in the main window.")
+else:
+    st.sidebar.success(f"✅ Loaded: {selected_material_name}")
+    with st.sidebar.expander("View Properties"):
+        st.write(f"E: {mat_props['E']/1e9:.1f} GPa")
+        st.write(f"α: {mat_props['alpha']*1e6:.1f} µε/K")
+        st.write(f"Yield: {mat_props['yield']/1e6:.1f} MPa")
 
 # =================================== DASHBOARD MODE ===================================
 if app_mode == "Calculator Dashboard":
@@ -122,24 +160,28 @@ if app_mode == "Calculator Dashboard":
             
             dt_si = to_si(dt_val, dt_unit, UNIT_TEMP)
 
-        # 4. Material
+        # 4. Material (Auto-filled but editable)
         with st.container():
             st.markdown("#### Material Properties")
+            if is_custom:
+                st.caption("Enter your custom material properties below:")
+            
             c1, c2 = st.columns([2, 1])
-            E_display = from_si(mat_props["E"], "GPa", UNIT_PRESSURE)
-            E_val = c1.number_input("Young's Modulus", value=E_display, format="%.2f")
+            # Default values: Use DB value if not custom, else default to 200 (Steel)
+            def_E = from_si(mat_props["E"], "GPa", UNIT_PRESSURE) if not is_custom else 200.0
+            E_val = c1.number_input("Young's Modulus", value=def_E, format="%.2f", key="E_in")
             c2.text("\n\nGPa") 
             E_si = to_si(E_val, "GPa", UNIT_PRESSURE)
 
             c3, c4 = st.columns([2, 1])
-            alpha_display = mat_props["alpha"] * 1e6
-            alpha_val = c3.number_input("Thermal Expansion (α)", value=alpha_display, format="%.2f")
+            def_alpha = mat_props["alpha"] * 1e6 if not is_custom else 11.7
+            alpha_val = c3.number_input("Thermal Expansion (α)", value=def_alpha, format="%.2f", key="a_in")
             c4.text("\n\nµm/m·K")
             alpha_si = alpha_val * 1e-6
 
             c5, c6 = st.columns([2, 1])
-            yield_display = from_si(mat_props["yield"], "MPa", UNIT_PRESSURE)
-            yield_val = c5.number_input("Allowable Stress (Yield)", value=yield_display, format="%.2f")
+            def_yield = from_si(mat_props["yield"], "MPa", UNIT_PRESSURE) if not is_custom else 250.0
+            yield_val = c5.number_input("Limit Stress (Yield/UTS)", value=def_yield, format="%.2f", key="y_in")
             c6.text("\n\nMPa")
             yield_si = to_si(yield_val, "MPa", UNIT_PRESSURE)
 
@@ -155,7 +197,7 @@ if app_mode == "Calculator Dashboard":
         fos_val = yield_si / total_stress_val if total_stress_val > 0 else float('inf')
 
         # Formatting Output
-        display_unit = st.radio("Display Results In:", ["Pa", "MPa", "psi", "kPa"], horizontal=True, index=1)
+        display_unit = st.radio("Display Results In:", ["Pa", "MPa", "psi", "ksi", "kPa"], horizontal=True, index=1)
         
         s_mech_disp = from_si(mech_stress, display_unit, UNIT_PRESSURE)
         s_therm_disp = from_si(therm_stress, display_unit, UNIT_PRESSURE)
@@ -167,7 +209,6 @@ if app_mode == "Calculator Dashboard":
         m2.metric("Thermal Stress", f"{s_therm_disp:.2f} {display_unit}")
         
         # --- CUSTOM HTML FOR TOTAL STRESS COLORING ---
-        # Determine Color: Green if Safe (FOS >= 1), Red if Unsafe (FOS < 1)
         if fos_val >= 1.0:
             res_color = "#28a745" # Green
             status_text = "SAFE"
@@ -175,7 +216,6 @@ if app_mode == "Calculator Dashboard":
             res_color = "#dc3545" # Red
             status_text = "UNSAFE"
 
-        # Using HTML to force color visibility (fixes white-on-white) and styling
         st.markdown(f"""
             <div style="background-color: #f0f2f6; padding: 15px; border-radius: 5px; border-left: 8px solid {res_color}; margin-top: 10px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <label style="font-size: 16px; font-weight: bold; color: #1e3d59; display: block; margin-bottom: 5px;">TOTAL STRESS</label>
@@ -197,7 +237,7 @@ if app_mode == "Calculator Dashboard":
         st.markdown("#### Safety Analysis")
         bar_color = "#28a745" if fos_val >= 1.0 else "#dc3545"
         
-        # HTML Bar for visual impact without emojis
+        # HTML Bar
         st.markdown(f"""
             <div style="width:100%; background-color:#ddd; height:20px; border-radius:10px;">
                 <div style="width:{min(fos_val*20, 100)}%; background-color:{bar_color}; height:20px; border-radius:10px; transition: width 0.5s;"></div>
@@ -259,9 +299,11 @@ elif app_mode == "Parametric Plotter":
     x_vals_plot = np.linspace(start, end, points)
     y_vals_plot = []
 
-    E_curr = mat_props["E"]
-    alpha_curr = mat_props["alpha"]
-    yield_curr = mat_props["yield"]
+    # Use material properties from selection (or inputs if custom not implemented in plot yet)
+    # For simplicity in Plotter, we pull from the dictionary constants for now
+    E_curr = mat_props["E"] if mat_props["E"] > 0 else 200e9
+    alpha_curr = mat_props["alpha"] if mat_props["alpha"] > 0 else 11.7e-6
+    yield_curr = mat_props["yield"] if mat_props["yield"] > 0 else 250e6
 
     for val in x_vals_plot:
         d_i = def_dia * 1e-3

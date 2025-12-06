@@ -10,20 +10,36 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for a professional, "Engineering Software" look (No Emojis)
+# Custom CSS for a professional, "Engineering Software" look
+# Added specific color forcing to fix "white on white" issues in Dark Mode
 st.markdown("""
     <style>
     .block-container {padding-top: 2rem;}
     h1 {font-family: 'Roboto', sans-serif; font-weight: 700; color: #1e3d59;}
     h2, h3 {font-family: 'Roboto', sans-serif; color: #1e3d59;}
-    .stMetric {background-color: #f0f2f6; padding: 10px; border-radius: 5px; border-left: 5px solid #1e3d59;}
+    
+    /* Force text color in metrics to be dark since background is light */
+    [data-testid="stMetricValue"] {
+        color: #1e3d59 !important;
+    }
+    [data-testid="stMetricLabel"] {
+        color: #1e3d59 !important;
+    }
+    
+    .stMetric {
+        background-color: #f0f2f6; 
+        padding: 10px; 
+        border-radius: 5px; 
+        border-left: 5px solid #1e3d59;
+    }
+    
     .stSelectbox label, .stNumberInput label {font-weight: bold;}
     </style>
 """, unsafe_allow_html=True)
 
 # =================================== LOGIC & CONVERSION ENGINE ===================================
 
-# Material Database (The "Unique" Feature)
+# Material Database
 MATERIALS = {
     "Custom": {"E": 200e9, "alpha": 12e-6, "yield": 250e6},
     "Structural Steel (A36)": {"E": 200e9, "alpha": 11.7e-6, "yield": 250e6},
@@ -45,7 +61,7 @@ def to_si(value, unit, conversion_dict):
 def from_si(value, unit, conversion_dict):
     return value / conversion_dict[unit]
 
-# Physics Core (Unchanged logic, just wrapped)
+# Physics Core
 def calc_area(diameter):
     return m.pi * (diameter / 2) ** 2
 
@@ -102,17 +118,17 @@ if app_mode == "Calculator Dashboard":
             st.markdown("#### Thermal Conditions")
             c1, c2 = st.columns([2, 1])
             dt_val = c1.number_input("Change in Temp (ΔT)", value=0.0, step=5.0)
-            dt_unit = c2.selectbox("Unit", list(UNIT_TEMP.keys()), index=1, key="u_t") # Default C
+            dt_unit = c2.selectbox("Unit", list(UNIT_TEMP.keys()), index=1, key="u_t")
             
             dt_si = to_si(dt_val, dt_unit, UNIT_TEMP)
 
-        # 4. Material (Auto-filled but editable)
+        # 4. Material
         with st.container():
             st.markdown("#### Material Properties")
             c1, c2 = st.columns([2, 1])
             E_display = from_si(mat_props["E"], "GPa", UNIT_PRESSURE)
             E_val = c1.number_input("Young's Modulus", value=E_display, format="%.2f")
-            c2.text("\n\nGPa") # Fixed unit for simplicity in input, calculated in SI
+            c2.text("\n\nGPa") 
             E_si = to_si(E_val, "GPa", UNIT_PRESSURE)
 
             c3, c4 = st.columns([2, 1])
@@ -150,8 +166,28 @@ if app_mode == "Calculator Dashboard":
         m1.metric("Mechanical Stress", f"{s_mech_disp:.2f} {display_unit}")
         m2.metric("Thermal Stress", f"{s_therm_disp:.2f} {display_unit}")
         
-        st.metric("TOTAL STRESS", f"{s_total_disp:.2f} {display_unit}", 
-                  delta="Tensile" if total_stress_val > 0 else "Compressive")
+        # --- CUSTOM HTML FOR TOTAL STRESS COLORING ---
+        # Determine Color: Green if Safe (FOS >= 1), Red if Unsafe (FOS < 1)
+        if fos_val >= 1.0:
+            res_color = "#28a745" # Green
+            status_text = "SAFE"
+        else:
+            res_color = "#dc3545" # Red
+            status_text = "UNSAFE"
+
+        # Using HTML to force color visibility (fixes white-on-white) and styling
+        st.markdown(f"""
+            <div style="background-color: #f0f2f6; padding: 15px; border-radius: 5px; border-left: 8px solid {res_color}; margin-top: 10px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <label style="font-size: 16px; font-weight: bold; color: #1e3d59; display: block; margin-bottom: 5px;">TOTAL STRESS</label>
+                <div style="font-size: 32px; font-weight: bold; color: {res_color}; font-family: sans-serif;">
+                    {s_total_disp:.2f} {display_unit}
+                </div>
+                <div style="font-size: 14px; color: #555; margin-top: 5px;">
+                    Type: <b>{'Tensile' if total_stress_val > 0 else 'Compressive'}</b> | Design Status: <b style="color:{res_color}">{status_text}</b>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        # ---------------------------------------------
 
         m3, m4 = st.columns(2)
         m3.metric("Total Strain (ε)", f"{strain_val:.6e}")
@@ -159,25 +195,14 @@ if app_mode == "Calculator Dashboard":
 
         # Visual FOS Gauge
         st.markdown("#### Safety Analysis")
-        if fos_val < 1.0:
-            st.error(f"CRITICAL FAILURE PREDICTED (FOS < 1.0)")
-            bar_color = "red"
-            progress = 1.0
-        elif fos_val < 1.5:
-            st.warning(f"MARGINAL DESIGN (FOS = {fos_val:.2f})")
-            bar_color = "orange"
-            progress = 0.7
-        else:
-            st.success(f"DESIGN SAFE (FOS = {fos_val:.2f})")
-            bar_color = "green"
-            progress = min(1.0, 1.0/fos_val + 0.2) # Visual representation
+        bar_color = "#28a745" if fos_val >= 1.0 else "#dc3545"
         
         # HTML Bar for visual impact without emojis
         st.markdown(f"""
             <div style="width:100%; background-color:#ddd; height:20px; border-radius:10px;">
-                <div style="width:{min(fos_val*20, 100)}%; background-color:{'#28a745' if fos_val>=1.5 else '#dc3545'}; height:20px; border-radius:10px; transition: width 0.5s;"></div>
+                <div style="width:{min(fos_val*20, 100)}%; background-color:{bar_color}; height:20px; border-radius:10px; transition: width 0.5s;"></div>
             </div>
-            <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem; color: #555;">
                 <span>0</span><span>1.0 (Limit)</span><span>5.0+</span>
             </div>
         """, unsafe_allow_html=True)
@@ -195,31 +220,26 @@ elif app_mode == "Parametric Plotter":
         x_axis_choice = st.selectbox("Select Independent Variable (X-Axis)", 
                                      ["Diameter", "Force", "Delta T", "Young's Modulus"])
         
-        # Dynamic Sliders based on choice
+        # Dynamic Sliders
         start, end = 0.0, 0.0
         
         if x_axis_choice == "Diameter":
             start = st.number_input("Start Diameter (mm)", value=5.0)
             end = st.number_input("End Diameter (mm)", value=50.0)
-            x_label = "Diameter (m)"
             
         elif x_axis_choice == "Force":
             start = st.number_input("Start Force (kN)", value=0.0)
             end = st.number_input("End Force (kN)", value=100.0)
-            x_label = "Force (N)"
             
         elif x_axis_choice == "Delta T":
             start = st.number_input("Start ΔT (C)", value=0.0)
             end = st.number_input("End ΔT (C)", value=200.0)
-            x_label = "Temperature Change (K)"
             
         elif x_axis_choice == "Young's Modulus":
             start = st.number_input("Start E (GPa)", value=50.0)
             end = st.number_input("End E (GPa)", value=250.0)
-            x_label = "Young's Modulus (Pa)"
 
         st.markdown("### Fixed Parameters")
-        # Defaults
         def_force = 10000.0
         def_dia = 20.0
         def_dt = 0.0
@@ -231,7 +251,6 @@ elif app_mode == "Parametric Plotter":
         if x_axis_choice != "Delta T":
             def_dt = st.number_input("Fixed ΔT (C)", value=0.0)
 
-        # Y-Axis Choice
         y_choice = st.selectbox("Select Dependent Variable (Y-Axis)", 
                                 ["Total Stress", "Strain", "Factor of Safety"])
 
@@ -240,38 +259,34 @@ elif app_mode == "Parametric Plotter":
     x_vals_plot = np.linspace(start, end, points)
     y_vals_plot = []
 
-    # Get Material Constants from sidebar
     E_curr = mat_props["E"]
     alpha_curr = mat_props["alpha"]
     yield_curr = mat_props["yield"]
 
     for val in x_vals_plot:
-        # Reset iteration variables to defaults
         d_i = def_dia * 1e-3
         f_i = def_force
         dt_i = def_dt
         E_i = E_curr
 
-        # Update based on X-axis choice
         if x_axis_choice == "Diameter": d_i = val * 1e-3
         elif x_axis_choice == "Force": f_i = val * 1e3
         elif x_axis_choice == "Delta T": dt_i = val
         elif x_axis_choice == "Young's Modulus": E_i = val * 1e9
         
-        # Physics
         A_i = calc_area(d_i)
         mech = calc_stress(f_i, A_i)
         therm = calc_thermal_stress(E_i, alpha_curr, dt_i)
         tot = mech + therm
         
         if y_choice == "Total Stress":
-            y_vals_plot.append(tot / 1e6) # Convert to MPa
+            y_vals_plot.append(tot / 1e6) 
             y_label = "Stress (MPa)"
         elif y_choice == "Strain":
             y_vals_plot.append(tot / E_i if E_i > 0 else 0)
             y_label = "Strain (unitless)"
         elif y_choice == "Factor of Safety":
-            y_vals_plot.append(yield_curr / tot if tot > 0 else 100) # Cap infinity
+            y_vals_plot.append(yield_curr / tot if tot > 0 else 100)
             y_label = "Factor of Safety"
 
     # 3. Plotting
@@ -284,7 +299,6 @@ elif app_mode == "Parametric Plotter":
         ax.set_ylabel(y_label, fontsize=10)
         ax.grid(True, linestyle='--', alpha=0.6)
         
-        # Special line for FOS
         if y_choice == "Factor of Safety":
             ax.axhline(1.0, color='#dc3545', linestyle='--', linewidth=2, label="Failure Limit")
             ax.legend()
